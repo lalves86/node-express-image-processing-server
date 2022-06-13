@@ -1,9 +1,10 @@
 const path = require("path");
-const { Router, response } = require("express");
+const { Router } = require("express");
 const multer = require("multer");
+const imageProcessor = require("./imageProcessor");
 
-const router = Router();
 const photoPath = path.resolve(__dirname, "../../client/photo-viewer.html");
+const router = Router();
 
 function filename(request, file, callback) {
   callback(null, file.originalname);
@@ -22,10 +23,16 @@ function fileFilter(request, file, callback) {
 
 const upload = multer({ fileFilter, storage });
 
-router.post("/upload", upload.single("photo"), (request, response) => {
-  request.fileValidationError
-    ? response.status(400).json({ error: request.fileValidationError })
-    : response.status(201).json({ success: true });
+router.post("/upload", upload.single("photo"), async (request, response) => {
+  if (request.fileValidationError) {
+    response.status(400).json({ error: request.fileValidationError });
+  }
+
+  try {
+    await imageProcessor(request.file.filename);
+  } catch (error) {}
+
+  response.status(201).json({ success: true });
 });
 
 router.get("/photo-viewer", (request, response) => {
